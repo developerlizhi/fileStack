@@ -468,7 +468,97 @@ async function loadFolderContent(folderPath) {
     }
     
     if (files.length === 0) {
-      fileListElement.innerHTML = '<div class="empty-message">文件夹为空</div>';
+      // 清空文件列表
+      fileListElement.innerHTML = '';
+      
+      // 检查是否可以返回上级目录
+      const path = require('path');
+      const parentPath = path.dirname(folderPath);
+      const canGoUp = parentPath !== folderPath; // 如果父路径和当前路径不同，说明可以返回上级
+      
+      // 如果可以返回上级，添加返回上级目录的条目
+      if (canGoUp) {
+        const backItem = document.createElement('div');
+        backItem.className = 'file-item back-item parent-directory';
+        
+        // 空的复选框列（不可选择）
+        const backCheckboxCol = document.createElement('div');
+        backCheckboxCol.className = 'file-checkbox-col';
+        
+        // 文件名显示为返回上级
+        const backFileName = document.createElement('div');
+        backFileName.className = 'file-name';
+        
+        const backIcon = document.createElement('span');
+        backIcon.className = 'file-icon';
+        backIcon.textContent = '⬆️';
+        
+        const backNameText = document.createElement('span');
+        backNameText.className = 'file-name-text directory-name';
+        backNameText.textContent = '返回上级';
+        backNameText.style.fontWeight = 'bold';
+        backNameText.style.color = '#666';
+        
+        backFileName.appendChild(backIcon);
+        backFileName.appendChild(backNameText);
+        
+        // 其他列显示为空或占位符
+        const backSize = document.createElement('div');
+        backSize.className = 'file-size';
+        backSize.textContent = '--';
+        
+        const backDuration = document.createElement('div');
+        backDuration.className = 'file-duration';
+        backDuration.textContent = '--';
+        
+        const backResolution = document.createElement('div');
+        backResolution.className = 'file-resolution';
+        backResolution.textContent = '--';
+        
+        const backBitrate = document.createElement('div');
+        backBitrate.className = 'file-bitrate';
+        backBitrate.textContent = '--';
+        
+        const backCodec = document.createElement('div');
+        backCodec.className = 'file-codec';
+        backCodec.textContent = '--';
+        
+        // 添加双击事件 - 返回上级目录
+        backItem.addEventListener('dblclick', (e) => {
+          e.preventDefault();
+          currentFolderPath = parentPath;
+          selectedPathElement.textContent = parentPath;
+          loadFolderContent(parentPath);
+        });
+        
+        // 添加悬停效果
+        backItem.addEventListener('mouseenter', () => {
+          backItem.style.backgroundColor = '#f0f0f0';
+        });
+        
+        backItem.addEventListener('mouseleave', () => {
+          backItem.style.backgroundColor = '';
+        });
+        
+        // 组装返回条目
+        backItem.appendChild(backCheckboxCol);
+        backItem.appendChild(backFileName);
+        backItem.appendChild(backSize);
+        backItem.appendChild(backDuration);
+        backItem.appendChild(backResolution);
+        backItem.appendChild(backBitrate);
+        backItem.appendChild(backCodec);
+        
+        // 添加到文件列表
+        fileListElement.appendChild(backItem);
+      }
+      
+      // 添加空文件夹提示
+      const emptyMessage = document.createElement('div');
+      emptyMessage.className = 'empty-message';
+      emptyMessage.textContent = '文件夹为空';
+      fileListElement.appendChild(emptyMessage);
+      
       return;
     }
     
