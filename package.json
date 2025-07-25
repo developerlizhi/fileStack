@@ -1,0 +1,45 @@
+{
+  "name": "filestack",
+  "version": "1.0.0",
+  "description": "文件管理工具，支持视频文件信息展示",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win",
+    "clean": "rm -rf dist",
+    "clean:build": "npm run clean && electron-builder",
+    "clean:build:mac": "npm run clean && electron-builder --mac",
+    "clean:build:win": "npm run clean && electron-builder --win",
+    "clean:build:all": "npm run clean && electron-builder --mac --win --linux"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "^35.2.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.filestack.app",
+    "productName": "FileStack",
+    "mac": {
+      "category": "public.app-category.utilities"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Utility"
+    },
+    "asar": true
+  }
+}

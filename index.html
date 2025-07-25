@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>FileStack</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="header-title">
+        <h1>FileStack</h1>
+        <span id="app-version" class="app-version">加载中...</span>
+      </div>
+      <div id="ffmpeg-status" class="status-container">
+        <div class="status-indicator checking"></div>
+        <span class="status-text">检查 FFmpeg 状态...</span>
+      </div>
+    </header>
+    
+    <div class="main-content">
+      <div class="controls">
+        <button id="select-folder-btn" class="btn primary">
+          <span class="btn-icon">📁</span>
+          选择文件夹
+        </button>
+        <div id="selected-path" class="selected-path">未选择文件夹</div>
+        <button id="delete-selected-btn" class="btn delete-btn" disabled>
+          <span class="btn-icon">🗑️</span>
+          删除选中文件
+        </button>
+      </div>
+      
+      <div class="file-list-container">
+        <div class="file-table">
+          <div class="file-table-header">
+            <div class="file-checkbox-col">
+              <input type="checkbox" id="select-all-checkbox" class="file-checkbox">
+            </div>
+            <div class="file-name">文件名</div>
+            <div class="file-size">大小</div>
+            <div class="file-duration">时长</div>
+            <div class="file-resolution">分辨率</div>
+            <div class="file-bitrate">码率</div>
+            <div class="file-codec">编码格式</div>
+          </div>
+          <div id="file-list" class="file-list">
+            <!-- 文件列表将在这里动态生成 -->
+            <div class="empty-message">请选择一个文件夹</div>
+          </div>
+        </div>
+        <div class="file-list-footer">
+          <div class="selection-info">
+            <span id="selection-count">未选择文件</span>
+            <span id="selection-size" class="selection-size"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="renderer.js"></script>
+</body>
+</html>
