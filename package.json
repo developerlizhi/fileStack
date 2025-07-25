@@ -5,15 +5,10 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder",
-    "dist:mac": "electron-builder --mac",
-    "dist:win": "electron-builder --win",
-    "clean": "rm -rf dist",
-    "clean:build": "npm run clean && electron-builder",
-    "clean:build:mac": "npm run clean && electron-builder --mac",
-    "clean:build:win": "npm run clean && electron-builder --win",
-    "clean:build:all": "npm run clean && electron-builder --mac --win --linux"
+    "build:all": "npm run clean && electron-builder --mac --win",
+    "build:win": "npm run clean && electron-builder --win",
+    "build:mac": "npm run clean && electron-builder --mac",
+    "clean": "rm -rf dist"
   },
   "keywords": [],
   "author": "",
@@ -27,12 +22,33 @@
     "appId": "com.filestack.app",
     "productName": "FileStack",
     "mac": {
-      "category": "public.app-category.utilities"
+      "category": "public.app-category.utilities",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "zip",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
     },
     "win": {
       "target": [
-        "nsis"
-      ]
+        {
+          "target": "portable",
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "zip",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "icon": "icon.ico",
+      "requestedExecutionLevel": "asInvoker",
+      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
     },
     "linux": {
       "target": [

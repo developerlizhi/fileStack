@@ -889,9 +889,11 @@ function updateSelectionUI() {
     if (fileInfo) {
       if (fileInfo.isDirectory) {
         dirCount++;
+        // 文件夹也有大小，需要包含在总计中
+        totalSize += fileInfo.size || 0;
       } else {
         fileCount++;
-        totalSize += fileInfo.size;
+        totalSize += fileInfo.size || 0;
       }
     }
   });
@@ -913,8 +915,8 @@ function updateSelectionUI() {
     
     selectionCountElement.textContent = countText;
     
-    // 只有选中文件时才显示大小
-    if (fileCount > 0 && totalSize > 0) {
+    // 显示总大小（包括文件和文件夹）
+    if (totalSize > 0) {
       selectionSizeElement.textContent = `总大小: ${formatFileSize(totalSize)}`;
     } else {
       selectionSizeElement.textContent = '';
