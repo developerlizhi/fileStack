@@ -61,7 +61,27 @@ async function checkFFmpeg(retries = 3, delay = 500) {
       console.log(`尝试检测FFmpeg (${attempt}/${retries})...`);
       const { stdout } = await execPromise('ffmpeg -version', execOptions);
       console.log('系统FFmpeg检测成功');
-      return { installed: true, version: stdout.split('\n')[0] };
+      
+      // 提取版本号信息
+      const versionLine = stdout.split('\n')[0];
+      
+      // 尝试从输出中提取实际版本号
+      const versionMatch = versionLine.match(/ffmpeg version (\d+\.\d+(?:\.\d+)?)/i);
+      if (versionMatch) {
+        const versionNumber = versionMatch[1];
+        return { 
+          installed: true, 
+          version: versionNumber,
+          fullVersion: versionLine 
+        };
+      } else {
+        // 如果无法提取版本号，返回安装状态但不提供版本号
+        return { 
+          installed: true, 
+          version: null,
+          fullVersion: versionLine 
+        };
+      }
     } catch (error) {
       console.log(`FFmpeg检测尝试 ${attempt}/${retries} 失败: ${error.message}`);
       
@@ -74,7 +94,26 @@ async function checkFFmpeg(retries = 3, delay = 500) {
           console.log('尝试使用ffprobe检测...');
           const { stdout } = await execPromise('ffprobe -version', execOptions);
           console.log('通过ffprobe检测FFmpeg成功');
-          return { installed: true, version: 'FFmpeg ' + stdout.split('\n')[0] };
+          
+          // 从ffprobe输出中提取版本号
+          const versionLine = stdout.split('\n')[0];
+          
+          const versionMatch = versionLine.match(/ffprobe version (\d+\.\d+(?:\.\d+)?)/i);
+          if (versionMatch) {
+            const versionNumber = versionMatch[1];
+            return { 
+              installed: true, 
+              version: versionNumber,
+              fullVersion: versionLine 
+            };
+          } else {
+            // 如果无法提取版本号，返回安装状态但不提供版本号
+            return { 
+              installed: true, 
+              version: null,
+              fullVersion: versionLine 
+            };
+          }
         } catch (ffprobeError) {
           console.log('FFmpeg和ffprobe检测都失败');
           console.log('ffprobe错误:', ffprobeError.message);

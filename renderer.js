@@ -388,26 +388,23 @@ ipcRenderer.on('ffmpeg-status', (event, status) => {
   statusIndicator.classList.remove('installed', 'not-installed');
   statusIndicator.classList.add('checking');
   
-  if (status.installed) {
-    // 成功检测到FFmpeg
+  if (status.installed && status.version) {
+    // 成功检测到FFmpeg并获取到版本号
     statusIndicator.classList.add('installed');
     statusIndicator.classList.remove('not-installed', 'checking');
-    statusText.textContent = 'FFmpeg 已安装';
+    
+    // 显示实际检测到的版本号
+    const versionText = `ffmpeg ${status.version}`;
+    statusText.textContent = versionText;
+    
     selectFolderBtn.disabled = false;
   } else {
-    // FFmpeg检测失败
+    // FFmpeg检测失败或无法获取版本号
     statusIndicator.classList.add('not-installed');
     statusIndicator.classList.remove('installed', 'checking');
     
-    // 显示更详细的错误信息
-    if (status.error) {
-      const errorMsg = status.error.includes('not found') ? 
-        'FFmpeg 未安装，请先安装FFmpeg' : 
-        `FFmpeg 检测失败: ${status.error.substring(0, 100)}`;
-      statusText.textContent = errorMsg;
-    } else {
-      statusText.textContent = 'FFmpeg 未安装或检测失败，请确保FFmpeg已正确安装';
-    }
+    // 显示未安装提示
+    statusText.textContent = 'ffmpeg 未安装';
     
     selectFolderBtn.disabled = true;
   }
