@@ -346,16 +346,18 @@ header h1 {
   overflow: hidden;
 }
 
+/* 文件表格头部样式 - 统一样式定义 */
 .file-table-header {
   display: flex;
-  padding: 12px 20px;
-  background-color: #f5f5f7;
+  background-color: #f8f9fa;
   border-bottom: 2px solid #e1e1e1;
-  font-weight: 600;
+  padding: 14px 20px;
+  font-weight: bold;
   font-size: 14px;
   color: #333;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  position: relative;
 }
 
 .file-checkbox-col {
@@ -365,19 +367,78 @@ header h1 {
   justify-content: center;
 }
 
+.file-table-header > div {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* 列分隔线样式 */
+.column-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  background: transparent;
+  z-index: 10;
+}
+
+.column-resizer:hover {
+  background-color: #0071e3;
+  opacity: 0.5;
+}
+
+.column-resizer.resizing {
+  background-color: #0071e3;
+  opacity: 0.8;
+}
+
+/* 调整时的视觉反馈 */
+.file-table.resizing {
+  user-select: none;
+}
+
+.file-table.resizing .column-resizer {
+  background-color: #0071e3;
+  opacity: 0.3;
+}
+
+/* 优化的列宽分配 - 更好地填满空间 */
 .file-table-header .file-name {
-  flex: 3;
+  flex: 3.0; /* 增加文件名列宽度 */
+}
+
+.file-table-header .file-modified-time {
+  flex: 1.4; /* 增加修改时间列宽度 */
 }
 
 .file-table-header .file-size {
-  flex: 0.8;
+  flex: 0.8; /* 增加文件大小列宽度 */
 }
 
-.file-table-header .file-duration,
-.file-table-header .file-resolution,
-.file-table-header .file-bitrate,
+.file-table-header .file-type {
+  flex: 0.8; /* 增加种类列宽度 */
+}
+
+.file-table-header .file-duration {
+  flex: 0.8; /* 增加时长列宽度 */
+}
+
+.file-table-header .file-resolution {
+  flex: 1.0; /* 增加分辨率列宽度 */
+}
+
+.file-table-header .file-bitrate {
+  flex: 0.8; /* 增加码率列宽度 */
+}
+
 .file-table-header .file-codec {
-  flex: 0.7;
+  flex: 1.0; /* 增加编码格式列宽度 */
+  display: flex;
+  align-items: center;
+  justify-content: center; /* 水平居中对齐 */
 }
 
 /* 复选框样式 */
@@ -490,8 +551,9 @@ header h1 {
   justify-content: center;
 }
 
+/* 文件项各列样式 - 与表头列宽保持一致 */
 .file-name {
-  flex: 3;
+  flex: 3.0; /* 与表头保持一致 */
   display: flex;
   align-items: center;
   position: relative;
@@ -499,11 +561,10 @@ header h1 {
 
 .file-name-text {
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
   flex: 1;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .file-name-text:hover {
@@ -531,21 +592,74 @@ header h1 {
   font-size: 16px;
 }
 
-.file-size {
-  flex: 0.8;
+.file-modified-time {
+  flex: 1.4; /* 与表头保持一致 */
   display: flex;
   align-items: center;
-  font-size: 13px;
+  font-size: 12px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-size {
+  flex: 0.8; /* 与表头保持一致 */
+  display: flex;
+  align-items: center;
+  font-size: 12px;
   color: #666;
 }
 
-.file-duration,
-.file-resolution,
-.file-bitrate,
-.file-codec {
-  flex: 0.7;
+.file-type {
+  flex: 0.8; /* 与表头保持一致 */
   display: flex;
   align-items: center;
+  font-size: 12px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-duration {
+  flex: 0.8; /* 与表头保持一致 */
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-resolution {
+  flex: 1.0; /* 与表头保持一致 */
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-bitrate {
+  flex: 0.8; /* 与表头保持一致 */
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-codec {
+  flex: 1.0; /* 与表头保持一致 */
+  display: flex;
+  align-items: center;
+  justify-content: center; /* 水平居中对齐 */
   font-size: 12px;
   color: #666;
   white-space: nowrap;
@@ -800,4 +914,269 @@ header h1 {
 
 .custom-confirm-btn.confirm:hover {
   background-color: #ff3742;
+}
+
+/* 格式化确认对话框样式 */
+.format-confirm-dialog {
+  min-width: 600px;
+  max-width: 800px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.format-confirm-desc {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.format-table-container {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 20px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  max-height: 400px;
+}
+
+.format-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.format-table thead {
+  background-color: #f8f9fa;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.format-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #495057;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.format-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid #f1f3f4;
+  vertical-align: middle;
+}
+
+.format-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.format-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.format-table .old-name {
+  color: #6c757d;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  background-color: #f8f9fa;
+  border-radius: 3px;
+  padding: 4px 6px;
+}
+
+.format-table .arrow {
+  text-align: center;
+  color: #28a745;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.format-table .new-name {
+  color: #28a745;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-weight: 500;
+  background-color: #f0f8f0;
+  border-radius: 3px;
+  padding: 4px 6px;
+}
+
+/* 格式化确认对话框的确认按钮样式 */
+.format-confirm-dialog .custom-confirm-btn.confirm {
+  background-color: #28a745;
+  color: white;
+}
+
+.format-confirm-dialog .custom-confirm-btn.confirm:hover {
+  background-color: #218838;
+}
+
+/* 排序功能样式 */
+.sortable {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  transition: background-color 0.2s ease;
+}
+
+.sortable:hover {
+  background-color: #e9ecef;
+}
+
+.sort-indicator {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 12px;
+  color: #999;
+  transition: color 0.2s ease;
+}
+
+.sortable.sort-asc .sort-indicator::before {
+  content: '▲';
+  color: #0071e3;
+}
+
+.sortable.sort-desc .sort-indicator::before {
+  content: '▼';
+  color: #0071e3;
+}
+
+.sortable:not(.sort-asc):not(.sort-desc) .sort-indicator::before {
+  content: '▲▼';
+  font-size: 10px;
+  opacity: 0.5;
+}
+
+/* 视频处理进度提示框样式 */
+.progress-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  backdrop-filter: blur(2px);
+}
+
+.progress-dialog {
+  background: white;
+  border-radius: 12px;
+  padding: 32px;
+  min-width: 480px;
+  max-width: 600px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  animation: progressFadeIn 0.3s ease-out;
+}
+
+@keyframes progressFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.progress-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.progress-header h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 8px 0;
+}
+
+.progress-subtitle {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+}
+
+.progress-content {
+  margin-bottom: 16px;
+}
+
+.progress-bar-container {
+  margin-bottom: 16px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0071e3, #00a8ff);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+.progress-bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: progressShimmer 1.5s infinite;
+}
+
+@keyframes progressShimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.progress-text {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: #666;
+}
+
+#progress-percentage {
+  font-weight: 600;
+  color: #0071e3;
+}
+
+#progress-count {
+  font-size: 13px;
+  color: #999;
+}
+
+.current-file {
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  padding: 12px 16px;
+  font-size: 13px;
+  color: #495057;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  word-break: break-all;
+  line-height: 1.4;
+  border-left: 3px solid #0071e3;
+}
+
+.current-file::before {
+  content: '📹 ';
+  margin-right: 8px;
 }

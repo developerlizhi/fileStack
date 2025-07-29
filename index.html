@@ -41,12 +41,38 @@
             <div class="file-checkbox-col">
               <input type="checkbox" id="select-all-checkbox" class="file-checkbox">
             </div>
-            <div class="file-name">文件名</div>
-            <div class="file-size">大小</div>
-            <div class="file-duration">时长</div>
-            <div class="file-resolution">分辨率</div>
-            <div class="file-bitrate">码率</div>
-            <div class="file-codec">编码格式</div>
+            <div class="file-name sortable" data-sort="name" data-column="file-name">
+              文件名 <span class="sort-indicator"></span>
+              <div class="column-resizer"></div>
+            </div>
+            <div class="file-modified-time sortable" data-sort="modifiedTime" data-column="file-modified-time">
+              修改时间 <span class="sort-indicator"></span>
+              <div class="column-resizer"></div>
+            </div>
+            <div class="file-size sortable" data-sort="size" data-column="file-size">
+              大小 <span class="sort-indicator"></span>
+              <div class="column-resizer"></div>
+            </div>
+            <div class="file-type sortable" data-sort="type" data-column="file-type">
+              种类 <span class="sort-indicator"></span>
+              <div class="column-resizer"></div>
+            </div>
+            <div class="file-duration sortable" data-sort="duration" data-column="file-duration">
+              时长 <span class="sort-indicator"></span>
+              <div class="column-resizer"></div>
+            </div>
+            <div class="file-resolution sortable" data-sort="resolution" data-column="file-resolution">
+              分辨率 <span class="sort-indicator"></span>
+              <div class="column-resizer"></div>
+            </div>
+            <div class="file-bitrate sortable" data-sort="bitrate" data-column="file-bitrate">
+              码率 <span class="sort-indicator"></span>
+              <div class="column-resizer"></div>
+            </div>
+            <div class="file-codec sortable" data-sort="codec" data-column="file-codec">
+              编码格式 <span class="sort-indicator"></span>
+              <div class="column-resizer"></div>
+            </div>
           </div>
           <div id="file-list" class="file-list">
             <!-- 文件列表将在这里动态生成 -->
@@ -59,6 +85,28 @@
             <span id="selection-size" class="selection-size"></span>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 视频处理进度提示框 -->
+  <div id="video-progress-overlay" class="progress-overlay" style="display: none;">
+    <div class="progress-dialog">
+      <div class="progress-header">
+        <h3>正在处理视频文件</h3>
+        <div class="progress-subtitle">正在获取视频信息，请稍候...</div>
+      </div>
+      <div class="progress-content">
+        <div class="progress-bar-container">
+          <div class="progress-bar">
+            <div id="progress-bar-fill" class="progress-bar-fill" style="width: 0%;"></div>
+          </div>
+          <div class="progress-text">
+            <span id="progress-percentage">0%</span>
+            <span id="progress-count">0 / 0</span>
+          </div>
+        </div>
+        <div id="current-file" class="current-file">准备中...</div>
       </div>
     </div>
   </div>

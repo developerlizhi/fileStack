@@ -217,128 +217,231 @@ ipcMain.handle('select-folder', async () => {
 ipcMain.handle('get-folder-content', async (event, folderPath) => {
   try {
     const files = fs.readdirSync(folderPath, { withFileTypes: true });
-    const fileDetails = await Promise.all(files.map(async (file) => {
+    
+    // 过滤掉 .DS_Store 文件
+    const filteredFiles = files.filter(file => file.name !== '.DS_Store');
+    
+    // 首先快速返回基本文件信息
+    const basicFileDetails = filteredFiles.map((file) => {
       const filePath = path.join(folderPath, file.name);
       const stats = fs.statSync(filePath);
       
-      let details = {
-        name: file.name,
-        path: filePath,
-        size: file.isDirectory() ? await calculateFolderSize(filePath) : stats.size,
-        isDirectory: file.isDirectory(),
-        isHidden: file.name.startsWith('.')
-      };
-      
-      // 检查是否为视频文件
       const videoExtensions = ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm'];
       const ext = path.extname(file.name).toLowerCase();
+      const isVideo = !file.isDirectory() && videoExtensions.includes(ext);
       
-      if (!file.isDirectory() && videoExtensions.includes(ext)) {
+      return {
+        name: file.name,
+        path: filePath,
+        size: file.isDirectory() ? 0 : stats.size, // 文件夹大小稍后计算
+        isDirectory: file.isDirectory(),
+        isHidden: file.name.startsWith('.'),
+        modifiedTime: stats.mtime,
+        isVideo: isVideo,
+        // 视频信息占位符
+        duration: isVideo ? '--' : undefined,
+        resolution: isVideo ? '--' : undefined,
+        bitrate: isVideo ? '--' : undefined,
+        codec: isVideo ? '--' : undefined
+      };
+    });
+    
+    // 立即返回基本信息，让界面先显示
+    event.sender.send('folder-content-basic', basicFileDetails);
+    
+    // 异步处理文件夹大小和视频信息
+    const videoFiles = basicFileDetails.filter(file => file.isVideo);
+    const totalVideoFiles = videoFiles.length;
+    
+    if (totalVideoFiles > 0) {
+      // 发送开始处理视频的通知
+      event.sender.send('video-processing-start', { total: totalVideoFiles });
+    }
+    
+    // 处理文件夹大小（异步）
+    const folderSizePromises = basicFileDetails
+      .filter(file => file.isDirectory)
+      .map(async (file) => {
         try {
-          // 根据用户要求，直接使用系统环境中的ffprobe
-          // 在打包环境中，可能需要特殊处理PATH环境变量
-          const execOptions = {
-            timeout: 10000,
-            env: process.env
-          };
+          const size = await calculateFolderSize(file.path);
+          return { path: file.path, size };
+        } catch (error) {
+          return { path: file.path, size: 0 };
+        }
+      });
+    
+    // 处理视频信息（逐个处理以显示进度）
+    let processedVideoCount = 0;
+    const videoInfoPromises = videoFiles.map(async (file, index) => {
+      try {
+        // 发送当前处理的视频文件信息
+        event.sender.send('video-processing-progress', {
+          current: processedVideoCount + 1,
+          total: totalVideoFiles,
+          fileName: file.name,
+          percentage: Math.round(((processedVideoCount + 1) / totalVideoFiles) * 100)
+        });
+        
+        const execOptions = {
+          timeout: 10000,
+          env: process.env
+        };
+        
+        // 在macOS打包环境中，可能需要添加常见的FFmpeg安装路径
+        if (app.isPackaged && process.platform === 'darwin') {
+          const commonPaths = [
+            '/usr/local/bin',
+            '/usr/bin',
+            '/opt/homebrew/bin',
+            '/opt/local/bin'
+          ];
           
-          // 在macOS打包环境中，可能需要添加常见的FFmpeg安装路径
-          if (app.isPackaged && process.platform === 'darwin') {
-            const commonPaths = [
-              '/usr/local/bin',
-              '/usr/bin',
-              '/opt/homebrew/bin',
-              '/opt/local/bin'
-            ];
-            
-            // 将这些路径添加到PATH环境变量中
-            const currentPath = process.env.PATH || '';
-            execOptions.env.PATH = commonPaths.join(':') + ':' + currentPath;
-            console.log('视频信息获取 - 扩展PATH环境变量:', execOptions.env.PATH);
+          const currentPath = process.env.PATH || '';
+          execOptions.env.PATH = commonPaths.join(':') + ':' + currentPath;
+        }
+        
+        console.log('获取视频信息:', file.path);
+        const { stdout } = await execPromise(`ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height,bit_rate -show_entries format=duration,bit_rate -of json "${file.path}"`, execOptions);
+        
+        let videoInfo = {
+          path: file.path,
+          duration: '--',
+          resolution: '--',
+          bitrate: '--',
+          codec: '--',
+          ffmpegError: false
+        };
+        
+        try {
+          // 解析JSON格式的输出
+          const info = JSON.parse(stdout);
+          
+          // 获取时长（秒）
+          if (info.format && info.format.duration) {
+            const totalSeconds = parseFloat(info.format.duration);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = Math.floor(totalSeconds % 60);
+            videoInfo.duration = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
           }
           
-          // 使用ffprobe命令获取视频信息，更可靠
-          console.log('获取视频信息:', filePath);
-          const { stdout } = await execPromise(`ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height,bit_rate -show_entries format=duration,bit_rate -of json "${filePath}"`, execOptions);
-          details.isVideo = true;
-          
-          try {
-            // 解析JSON格式的输出
-            const info = JSON.parse(stdout);
+          // 获取视频流信息
+          if (info.streams && info.streams.length > 0) {
+            const videoStream = info.streams.find(stream => stream.codec_type === 'video' || (stream.width && stream.height)) || info.streams[0];
             
-            // 获取时长（秒）
-            if (info.format && info.format.duration) {
-              const totalSeconds = parseFloat(info.format.duration);
-              const hours = Math.floor(totalSeconds / 3600);
-              const minutes = Math.floor((totalSeconds % 3600) / 60);
-              const seconds = Math.floor(totalSeconds % 60);
-              details.duration = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            }
-            
-            // 获取视频流信息
-            if (info.streams && info.streams.length > 0) {
-              // 查找视频流
-              const videoStream = info.streams.find(stream => stream.codec_type === 'video' || (stream.width && stream.height)) || info.streams[0];
+            if (videoStream) {
+              // 分辨率
+              if (videoStream.width && videoStream.height) {
+                videoInfo.resolution = `${videoStream.width}x${videoStream.height}`;
+              }
               
-              if (videoStream) {
-                // 分辨率
-                if (videoStream.width && videoStream.height) {
-                  details.resolution = `${videoStream.width}x${videoStream.height}`;
-                }
-                
-                // 编码格式
-                if (videoStream.codec_name) {
-                  details.codec = videoStream.codec_name;
-                }
-                
-                // 码率
-                if (videoStream.bit_rate) {
-                  details.bitrate = `${Math.round(parseInt(videoStream.bit_rate) / 1000)} kb/s`;
-                } else if (info.format && info.format.bit_rate) {
-                  details.bitrate = `${Math.round(parseInt(info.format.bit_rate) / 1000)} kb/s`;
-                }
+              // 编码格式
+              if (videoStream.codec_name) {
+                videoInfo.codec = videoStream.codec_name;
+              }
+              
+              // 码率
+              if (videoStream.bit_rate) {
+                videoInfo.bitrate = `${Math.round(parseInt(videoStream.bit_rate) / 1000)} kb/s`;
+              } else if (info.format && info.format.bit_rate) {
+                videoInfo.bitrate = `${Math.round(parseInt(info.format.bit_rate) / 1000)} kb/s`;
               }
             }
-          } catch (parseError) {
-            console.error('解析视频信息失败:', parseError);
-            // 如果JSON解析失败，尝试使用ffmpeg命令和正则表达式解析
-            const { stdout: ffmpegOutput } = await execPromise(`ffmpeg -i "${filePath}" 2>&1`);
+          }
+        } catch (parseError) {
+          console.error('解析视频信息失败:', parseError);
+          // 如果JSON解析失败，尝试使用ffmpeg命令和正则表达式解析
+          try {
+            const { stdout: ffmpegOutput } = await execPromise(`ffmpeg -i "${file.path}" 2>&1`);
             
-            // 解析视频信息
             const durationMatch = ffmpegOutput.match(/Duration: (\d{2}):(\d{2}):(\d{2})\.(\d{2})/i);
             if (durationMatch) {
               const hours = parseInt(durationMatch[1]);
               const minutes = parseInt(durationMatch[2]);
               const seconds = parseInt(durationMatch[3]);
-              details.duration = `${hours}:${minutes}:${seconds}`;
+              videoInfo.duration = `${hours}:${minutes}:${seconds}`;
             }
             
             const resolutionMatch = ffmpegOutput.match(/(\d{2,4})x(\d{2,4})/i);
             if (resolutionMatch) {
-              details.resolution = `${resolutionMatch[1]}x${resolutionMatch[2]}`;
+              videoInfo.resolution = `${resolutionMatch[1]}x${resolutionMatch[2]}`;
             }
             
             const bitrateMatch = ffmpegOutput.match(/bitrate: (\d+) kb\/s/i);
             if (bitrateMatch) {
-              details.bitrate = `${bitrateMatch[1]} kb/s`;
+              videoInfo.bitrate = `${bitrateMatch[1]} kb/s`;
             }
             
             const codecMatch = ffmpegOutput.match(/Video: ([^,]+)/i);
             if (codecMatch) {
-              details.codec = codecMatch[1].trim();
+              videoInfo.codec = codecMatch[1].trim();
             }
+          } catch (ffmpegError) {
+            console.error('FFmpeg解析也失败:', ffmpegError);
           }
-        } catch (error) {
-          // 如果ffmpeg命令失败，仍然标记为视频但没有详细信息
-          details.isVideo = true;
-          details.ffmpegError = true;
+        }
+        
+        processedVideoCount++;
+        
+        // 发送单个视频信息更新
+        event.sender.send('video-info-update', videoInfo);
+        
+        return videoInfo;
+        
+      } catch (error) {
+        console.error('获取视频信息失败:', error);
+        processedVideoCount++;
+        
+        const errorInfo = {
+          path: file.path,
+          duration: '--',
+          resolution: '--',
+          bitrate: '--',
+          codec: '--',
+          ffmpegError: true
+        };
+        
+        // 发送错误的视频信息更新
+        event.sender.send('video-info-update', errorInfo);
+        
+        return errorInfo;
+      }
+    });
+    
+    // 等待所有异步操作完成
+    const [folderSizes, videoInfos] = await Promise.all([
+      Promise.all(folderSizePromises),
+      Promise.all(videoInfoPromises)
+    ]);
+    
+    // 更新文件夹大小
+    folderSizes.forEach(({ path: folderPath, size }) => {
+      event.sender.send('folder-size-update', { path: folderPath, size });
+    });
+    
+    // 发送处理完成通知
+    if (totalVideoFiles > 0) {
+      event.sender.send('video-processing-complete');
+    }
+    
+    // 返回最终的完整文件信息
+    const finalFileDetails = basicFileDetails.map(file => {
+      if (file.isDirectory) {
+        const folderSize = folderSizes.find(f => f.path === file.path);
+        if (folderSize) {
+          file.size = folderSize.size;
+        }
+      } else if (file.isVideo) {
+        const videoInfo = videoInfos.find(v => v.path === file.path);
+        if (videoInfo) {
+          Object.assign(file, videoInfo);
         }
       }
-      
-      return details;
-    }));
+      return file;
+    });
     
-    return fileDetails;
+    return finalFileDetails;
+    
   } catch (error) {
     return { error: error.message };
   }
