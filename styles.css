@@ -564,7 +564,7 @@ header h1 {
   overflow: visible;
   flex: 1;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .file-name-text:hover {
@@ -596,7 +596,7 @@ header h1 {
   flex: 1.4; /* 与表头保持一致 */
   display: flex;
   align-items: center;
-  font-size: 12px;
+  font-size: 14px;
   color: #666;
   white-space: nowrap;
   overflow: hidden;
@@ -607,7 +607,7 @@ header h1 {
   flex: 0.8; /* 与表头保持一致 */
   display: flex;
   align-items: center;
-  font-size: 12px;
+  font-size: 14px;
   color: #666;
 }
 
@@ -615,7 +615,7 @@ header h1 {
   flex: 0.8; /* 与表头保持一致 */
   display: flex;
   align-items: center;
-  font-size: 12px;
+  font-size: 14px;
   color: #666;
   white-space: nowrap;
   overflow: hidden;
@@ -626,7 +626,7 @@ header h1 {
   flex: 0.8; /* 与表头保持一致 */
   display: flex;
   align-items: center;
-  font-size: 12px;
+  font-size: 14px;
   color: #666;
   white-space: nowrap;
   overflow: hidden;
@@ -637,7 +637,7 @@ header h1 {
   flex: 1.0; /* 与表头保持一致 */
   display: flex;
   align-items: center;
-  font-size: 12px;
+  font-size: 14px;
   color: #666;
   white-space: nowrap;
   overflow: hidden;
@@ -648,7 +648,7 @@ header h1 {
   flex: 0.8; /* 与表头保持一致 */
   display: flex;
   align-items: center;
-  font-size: 12px;
+  font-size: 14px;
   color: #666;
   white-space: nowrap;
   overflow: hidden;
@@ -660,7 +660,7 @@ header h1 {
   display: flex;
   align-items: center;
   justify-content: center; /* 水平居中对齐 */
-  font-size: 12px;
+  font-size: 14px;
   color: #666;
   white-space: nowrap;
   overflow: hidden;
