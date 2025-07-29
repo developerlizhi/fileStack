@@ -6,6 +6,7 @@ const selectFolderBtn = document.getElementById('select-folder-btn');
 const selectedPathElement = document.getElementById('selected-path');
 const fileListElement = document.getElementById('file-list');
 const deleteSelectedBtn = document.getElementById('delete-selected-btn');
+const formatFilenameBtn = document.getElementById('format-filename-btn');
 const selectAllCheckbox = document.getElementById('select-all-checkbox');
 const selectionCountElement = document.getElementById('selection-count');
 const selectionSizeElement = document.getElementById('selection-size');
@@ -26,6 +27,104 @@ function formatFileSize(bytes) {
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// 格式化文件名：文件名大写，扩展名小写
+function formatFilename(filename) {
+  const lastDotIndex = filename.lastIndexOf('.');
+  if (lastDotIndex === -1) {
+    // 没有扩展名的情况，只转换文件名为大写
+    return filename.toUpperCase();
+  }
+  
+  const nameWithoutExt = filename.substring(0, lastDotIndex);
+  const extension = filename.substring(lastDotIndex + 1);
+  
+  // 将文件名转为大写，扩展名转为小写
+  const formattedName = nameWithoutExt.toUpperCase();
+  const formattedExt = extension.toLowerCase();
+  
+  return `${formattedName}.${formattedExt}`;
+}
+
+// 格式化选中文件的文件名
+async function formatSelectedFilenames() {
+  if (selectedFiles.size === 0) {
+    alert('请先选择要格式化的文件');
+    return;
+  }
+  
+  try {
+    const filesToFormat = Array.from(selectedFiles);
+    const formatResults = [];
+    
+    for (const filePath of filesToFormat) {
+      const fileInfo = fileInfoMap.get(filePath);
+      if (fileInfo && !fileInfo.isDirectory) {
+        const newName = formatFilename(fileInfo.name);
+        if (newName !== fileInfo.name) {
+          // 构建新的完整路径
+          const lastSlashIndex = filePath.lastIndexOf('/');
+          const dir = filePath.substring(0, lastSlashIndex);
+          const newPath = dir + '/' + newName;
+          
+          formatResults.push({
+            oldPath: filePath,
+            newPath: newPath,
+            newName: newName,
+            oldName: fileInfo.name
+          });
+        }
+      }
+    }
+    
+    if (formatResults.length === 0) {
+      alert('选中的文件名已经是正确格式，无需格式化');
+      return;
+    }
+    
+    // 显示确认对话框
+    const fileList = formatResults.map(item => `${item.oldName} → ${item.newName}`).join('\n');
+    const confirmed = await showCustomConfirm(
+      '确认格式化文件名',
+      `将要格式化 ${formatResults.length} 个文件的文件名：\n\n${fileList}\n\n此操作不可撤销，确定要继续吗？`
+    );
+    
+    if (!confirmed) return;
+    
+    // 调用主进程进行文件重命名
+    let successCount = 0;
+    let errorCount = 0;
+    
+    for (const item of formatResults) {
+      try {
+        await ipcRenderer.invoke('rename-file', {
+          oldPath: item.oldPath,
+          newPath: item.newPath
+        });
+        successCount++;
+      } catch (error) {
+        console.error(`重命名失败: ${item.oldName}`, error);
+        errorCount++;
+      }
+    }
+    
+    // 重新加载文件夹内容
+    if (currentFolderPath) {
+      loadFolderContent(currentFolderPath);
+    }
+    
+    // 显示结果
+    if (errorCount === 0) {
+      alert(`成功格式化了 ${successCount} 个文件的文件名`);
+    } else {
+      alert(`格式化完成：成功 ${successCount} 个，失败 ${errorCount} 个`);
+    }
+    
+  } catch (error) {
+    console.error('格式化文件名失败:', error);
+    alert('格式化文件名失败: ' + error.message);
+  }
 }
 
 // 创建右键菜单
@@ -873,8 +972,9 @@ function updateSelectionUI() {
   const selectedCount = selectedFiles.size;
   const totalCheckboxes = document.querySelectorAll('.file-checkbox').length;
   
-  // 更新删除按钮状态
+  // 更新删除按钮和格式化按钮状态
   deleteSelectedBtn.disabled = selectedCount === 0;
+  formatFilenameBtn.disabled = selectedCount === 0;
   
   // 计算选中文件的总大小
   let totalSize = 0;
@@ -977,6 +1077,11 @@ deleteSelectedBtn.addEventListener('click', async () => {
     console.error('删除文件失败:', error);
     alert('删除文件失败: ' + error.message);
   }
+});
+
+// 格式化文件名功能
+formatFilenameBtn.addEventListener('click', async () => {
+  await formatSelectedFilenames();
 });
 
 // 页面初始化

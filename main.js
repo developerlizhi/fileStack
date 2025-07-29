@@ -484,6 +484,61 @@ ipcMain.handle('delete-file', async (event, filePath) => {
   }
 });
 
+// 重命名文件
+ipcMain.handle('rename-file', async (event, options) => {
+  try {
+    const { oldPath, newPath } = options;
+    
+    // 检查原文件是否存在
+    if (!fs.existsSync(oldPath)) {
+      throw new Error('原文件不存在');
+    }
+    
+    console.log('重命名文件:', oldPath, '->', newPath);
+    
+    // 使用mv命令执行重命名
+    const { spawn } = require('child_process');
+    
+    return new Promise((resolve, reject) => {
+      const mv = spawn('mv', [oldPath, newPath], {
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+      
+      let stderr = '';
+      
+      mv.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+      
+      mv.on('close', (code) => {
+        if (code === 0) {
+          console.log('文件重命名成功:', newPath);
+          resolve({ success: true });
+        } else {
+          console.error('mv命令失败，退出码:', code);
+          console.error('错误输出:', stderr);
+          reject(new Error(`重命名失败 (退出码: ${code}): ${stderr}`));
+        }
+      });
+      
+      mv.on('error', (error) => {
+        console.error('mv命令执行错误:', error);
+        reject(new Error(`mv命令执行失败: ${error.message}`));
+      });
+      
+      // 设置超时
+      setTimeout(() => {
+        mv.kill();
+        reject(new Error('重命名操作超时'));
+      }, 10000); // 10秒超时
+    });
+    
+  } catch (error) {
+    console.error('重命名文件失败:', error);
+    throw new Error(`重命名文件失败: ${error.message}`);
+  }
+});
+
 // 打开文件夹
 ipcMain.handle('open-folder', async (event, folderPath) => {
   try {
