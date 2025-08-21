@@ -3,6 +3,7 @@ const path = require('path');
 const { exec } = require('child_process');
 const fs = require('fs');
 const util = require('util');
+const os = require('os');
 
 const execPromise = util.promisify(exec);
 
@@ -242,7 +243,8 @@ ipcMain.handle('get-folder-content', async (event, folderPath) => {
         duration: isVideo ? '--' : undefined,
         resolution: isVideo ? '--' : undefined,
         bitrate: isVideo ? '--' : undefined,
-        codec: isVideo ? '--' : undefined
+        codec: isVideo ? '--' : undefined,
+        thumbnailPath: isVideo ? null : undefined
       };
     });
     
@@ -270,7 +272,7 @@ ipcMain.handle('get-folder-content', async (event, folderPath) => {
         }
       });
     
-    // 处理视频信息（逐个处理以显示进度）
+    // 处理视频信息和缩略图（逐个处理以显示进度）
     let processedVideoCount = 0;
     const videoInfoPromises = videoFiles.map(async (file, index) => {
       try {
@@ -309,8 +311,71 @@ ipcMain.handle('get-folder-content', async (event, folderPath) => {
           resolution: '--',
           bitrate: '--',
           codec: '--',
+          thumbnailPath: null,
           ffmpegError: false
         };
+        
+        // 异步生成缩略图
+        try {
+          const thumbnailResult = await new Promise((resolve) => {
+            // 使用之前定义的生成缩略图函数
+            const crypto = require('crypto');
+            const hash = crypto.createHash('md5').update(file.path).digest('hex');
+            const thumbnailDir = path.join(require('os').tmpdir(), 'filestack-thumbnails');
+            const thumbnailPath = path.join(thumbnailDir, `${hash}.jpg`);
+            
+            // 如果缩略图已存在，直接返回
+            if (fs.existsSync(thumbnailPath)) {
+              resolve({ success: true, thumbnailPath });
+              return;
+            }
+            
+            // 创建缩略图目录
+            if (!fs.existsSync(thumbnailDir)) {
+              fs.mkdirSync(thumbnailDir, { recursive: true });
+            }
+            
+            const execOptions = {
+              timeout: 15000,
+              env: process.env
+            };
+            
+            // 在macOS打包环境中，可能需要添加常见的FFmpeg安装路径
+            if (app.isPackaged && process.platform === 'darwin') {
+              const commonPaths = [
+                '/usr/local/bin',
+                '/usr/bin',
+                '/opt/homebrew/bin',
+                '/opt/local/bin'
+              ];
+              
+              const currentPath = process.env.PATH || '';
+              execOptions.env.PATH = commonPaths.join(':') + ':' + currentPath;
+            }
+            
+            // 使用FFmpeg提取视频首帧
+             const ffmpegCommand = `ffmpeg -i "${file.path}" -vframes 1 -vf "scale=240:180:force_original_aspect_ratio=decrease,pad=240:180:(ow-iw)/2:(oh-ih)/2" -y "${thumbnailPath}"`;
+            
+            execPromise(ffmpegCommand, execOptions)
+              .then(() => {
+                if (fs.existsSync(thumbnailPath)) {
+                  resolve({ success: true, thumbnailPath });
+                } else {
+                  resolve({ success: false, error: '缩略图生成失败' });
+                }
+              })
+              .catch((error) => {
+                console.error('生成视频缩略图失败:', error);
+                resolve({ success: false, error: error.message });
+              });
+          });
+          
+          if (thumbnailResult.success) {
+            videoInfo.thumbnailPath = thumbnailResult.thumbnailPath;
+          }
+        } catch (thumbnailError) {
+          console.error('缩略图生成过程出错:', thumbnailError);
+        }
         
         try {
           // 解析JSON格式的输出
@@ -398,6 +463,7 @@ ipcMain.handle('get-folder-content', async (event, folderPath) => {
           resolution: '--',
           bitrate: '--',
           codec: '--',
+          thumbnailPath: null,
           ffmpegError: true
         };
         
@@ -444,6 +510,61 @@ ipcMain.handle('get-folder-content', async (event, folderPath) => {
     
   } catch (error) {
     return { error: error.message };
+  }
+});
+
+// 生成视频预览图
+ipcMain.handle('generate-video-thumbnail', async (event, videoPath) => {
+  try {
+    // 创建缩略图目录
+    const thumbnailDir = path.join(os.tmpdir(), 'filestack-thumbnails');
+    if (!fs.existsSync(thumbnailDir)) {
+      fs.mkdirSync(thumbnailDir, { recursive: true });
+    }
+    
+    // 生成缩略图文件名（基于视频文件路径的hash）
+    const crypto = require('crypto');
+    const hash = crypto.createHash('md5').update(videoPath).digest('hex');
+    const thumbnailPath = path.join(thumbnailDir, `${hash}.jpg`);
+    
+    // 如果缩略图已存在，直接返回
+    if (fs.existsSync(thumbnailPath)) {
+      return { success: true, thumbnailPath };
+    }
+    
+    const execOptions = {
+      timeout: 15000,
+      env: process.env
+    };
+    
+    // 在macOS打包环境中，可能需要添加常见的FFmpeg安装路径
+    if (app.isPackaged && process.platform === 'darwin') {
+      const commonPaths = [
+        '/usr/local/bin',
+        '/usr/bin',
+        '/opt/homebrew/bin',
+        '/opt/local/bin'
+      ];
+      
+      const currentPath = process.env.PATH || '';
+      execOptions.env.PATH = commonPaths.join(':') + ':' + currentPath;
+    }
+    
+    // 使用FFmpeg提取视频首帧
+    const ffmpegCommand = `ffmpeg -i "${videoPath}" -vframes 1 -vf "scale=240:180:force_original_aspect_ratio=decrease,pad=240:180:(ow-iw)/2:(oh-ih)/2" -y "${thumbnailPath}"`;
+    
+    await execPromise(ffmpegCommand, execOptions);
+    
+    // 检查文件是否成功生成
+    if (fs.existsSync(thumbnailPath)) {
+      return { success: true, thumbnailPath };
+    } else {
+      return { success: false, error: '缩略图生成失败' };
+    }
+    
+  } catch (error) {
+    console.error('生成视频缩略图失败:', error);
+    return { success: false, error: error.message };
   }
 });
 

@@ -615,7 +615,22 @@ function createFileItem(file) {
   
   const fileIcon = document.createElement('span');
   fileIcon.className = 'file-icon';
-  fileIcon.textContent = file.isDirectory ? '📁' : file.isVideo ? '🎬' : '📄';
+  
+  // 如果是视频文件且有缩略图，显示缩略图；否则显示默认图标
+  if (file.isVideo && file.thumbnailPath) {
+    const thumbnailImg = document.createElement('img');
+    thumbnailImg.className = 'video-thumbnail';
+    thumbnailImg.src = `file://${file.thumbnailPath}`;
+    thumbnailImg.alt = '视频预览';
+    thumbnailImg.onerror = function() {
+      // 如果缩略图加载失败，显示默认视频图标
+      this.style.display = 'none';
+      fileIcon.textContent = '🎬';
+    };
+    fileIcon.appendChild(thumbnailImg);
+  } else {
+    fileIcon.textContent = file.isDirectory ? '📁' : file.isVideo ? '🎬' : '📄';
+  }
   
   const fileNameText = document.createElement('span');
   fileNameText.className = 'file-name-text';
