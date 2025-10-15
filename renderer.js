@@ -1232,6 +1232,111 @@ function showTrimDialog(videoPath, fileName, duration) {
   });
 }
 
+// 显示视频裁切进度对话框
+function showTrimProgressDialog(fileName) {
+  // 创建遮罩层
+  const overlay = document.createElement('div');
+  overlay.className = 'progress-overlay';
+  overlay.id = 'trim-progress-overlay';
+  
+  // 创建对话框
+  const dialog = document.createElement('div');
+  dialog.className = 'progress-dialog';
+  
+  // 创建标题区域
+  const header = document.createElement('div');
+  header.className = 'progress-header';
+  
+  const title = document.createElement('h3');
+  title.textContent = '✂️ 视频裁切中';
+  
+  const subtitle = document.createElement('div');
+  subtitle.className = 'progress-subtitle';
+  subtitle.textContent = '正在处理视频，请稍候...';
+  
+  header.appendChild(title);
+  header.appendChild(subtitle);
+  
+  // 创建内容区域
+  const content = document.createElement('div');
+  content.className = 'progress-content';
+  
+  // 进度条容器
+  const progressContainer = document.createElement('div');
+  progressContainer.className = 'progress-bar-container';
+  
+  const progressBar = document.createElement('div');
+  progressBar.className = 'progress-bar';
+  
+  const progressFill = document.createElement('div');
+  progressFill.className = 'progress-bar-fill';
+  progressFill.id = 'trim-progress-fill';
+  progressFill.style.width = '0%';
+  
+  progressBar.appendChild(progressFill);
+  progressContainer.appendChild(progressBar);
+  
+  // 进度文本
+  const progressText = document.createElement('div');
+  progressText.className = 'progress-text';
+  
+  const percentage = document.createElement('span');
+  percentage.id = 'trim-progress-percentage';
+  percentage.textContent = '0%';
+  
+  const timeInfo = document.createElement('span');
+  timeInfo.id = 'trim-progress-time';
+  timeInfo.textContent = '0.0s / 0.0s';
+  
+  progressText.appendChild(percentage);
+  progressText.appendChild(timeInfo);
+  
+  // 当前文件信息
+  const currentFile = document.createElement('div');
+  currentFile.className = 'current-file';
+  currentFile.textContent = fileName;
+  
+  content.appendChild(progressContainer);
+  content.appendChild(progressText);
+  content.appendChild(currentFile);
+  
+  // 组装对话框
+  dialog.appendChild(header);
+  dialog.appendChild(content);
+  
+  overlay.appendChild(dialog);
+  document.body.appendChild(overlay);
+  
+  return overlay;
+}
+
+// 隐藏视频裁切进度对话框
+function hideTrimProgressDialog() {
+  const overlay = document.getElementById('trim-progress-overlay');
+  if (overlay) {
+    document.body.removeChild(overlay);
+  }
+}
+
+// 更新视频裁切进度
+function updateTrimProgress(data) {
+  const progressFill = document.getElementById('trim-progress-fill');
+  const percentage = document.getElementById('trim-progress-percentage');
+  const timeInfo = document.getElementById('trim-progress-time');
+  
+  if (progressFill) {
+    progressFill.style.width = `${data.progress}%`;
+  }
+  
+  if (percentage) {
+    percentage.textContent = `${data.progress}%`;
+  }
+  
+  if (timeInfo && data.currentTime && data.totalTime) {
+    timeInfo.textContent = `${data.currentTime}s / ${data.totalTime}s`;
+  }
+}
+
 // 裁切视频文件
 async function trimVideo(videoPath, fileName, duration) {
   try {
@@ -1249,16 +1354,20 @@ async function trimVideo(videoPath, fileName, duration) {
       endTime: result.endTime
     });
     
-    // 调用主进程进行视频裁切
-    await ipcRenderer.invoke('trim-video', {
-      inputPath: videoPath,
-      startTime: result.startTime,
-      endTime: result.endTime
-    });
+    // 显示进度对话框
+    showTrimProgressDialog(fileName);
     
-    // 裁切成功后重新加载文件夹内容
-    if (currentFolderPath) {
-      loadFolderContent(currentFolderPath);
+    try {
+      // 调用主进程进行视频裁切
+      await ipcRenderer.invoke('trim-video', {
+        inputPath: videoPath,
+        startTime: result.startTime,
+        endTime: result.endTime
+      });
+    } catch (error) {
+      // 隐藏进度对话框
+      hideTrimProgressDialog();
+      throw error;
     }
     
   } catch (error) {
@@ -1517,6 +1626,37 @@ ipcRenderer.on('folder-size-update', (event, data) => {
 
 ipcRenderer.on('video-processing-complete', (event) => {
   hideVideoProcessingDialog();
+});
+
+// 视频裁切进度事件监听器
+ipcRenderer.on('video-trim-start', (event, data) => {
+  console.log('视频裁切开始:', data);
+});
+
+ipcRenderer.on('video-trim-progress', (event, data) => {
+  console.log('视频裁切进度:', data);
+  updateTrimProgress(data);
+});
+
+ipcRenderer.on('video-trim-complete', (event, data) => {
+  console.log('视频裁切完成:', data);
+  hideTrimProgressDialog();
+  
+  // 显示成功消息
+  alert('视频裁切成功！');
+  
+  // 重新加载文件夹内容
+  if (currentFolderPath) {
+    loadFolderContent(currentFolderPath);
+  }
+});
+
+ipcRenderer.on('video-trim-error', (event, data) => {
+  console.error('视频裁切错误:', data);
+  hideTrimProgressDialog();
+  
+  // 显示错误消息
+  alert('视频裁切失败: ' + data.error);
 });
 
 // 选择管理功能

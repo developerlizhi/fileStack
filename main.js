@@ -612,6 +612,12 @@ ipcMain.handle('trim-video', async (event, options) => {
       endTime
     });
     
+    // 发送开始事件
+    event.sender.send('video-trim-start', {
+      fileName: path.basename(inputPath),
+      outputPath: outputPath
+    });
+    
     // 构建FFmpeg命令
     let ffmpegCommand = 'ffmpeg';
     
@@ -626,12 +632,14 @@ ipcMain.handle('trim-video', async (event, options) => {
       env.PATH = additionalPaths.join(':') + ':' + (env.PATH || '');
     }
     
+    // 添加进度输出参数
     const args = [
       '-i', inputPath,
       '-ss', startTime,
       '-to', endTime,
       '-c', 'copy',
       '-avoid_negative_ts', 'make_zero',
+      '-progress', 'pipe:1',
       outputPath
     ];
     
@@ -647,6 +655,40 @@ ipcMain.handle('trim-video', async (event, options) => {
       });
       
       let stderr = '';
+      let stdout = '';
+      let totalDuration = 0;
+      
+      // 解析时间字符串为秒数
+      function parseTimeToSeconds(timeStr) {
+        const parts = timeStr.split(':');
+        return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseFloat(parts[2]);
+      }
+      
+      // 计算总时长
+      const startSeconds = parseTimeToSeconds(startTime);
+      const endSeconds = parseTimeToSeconds(endTime);
+      totalDuration = endSeconds - startSeconds;
+      
+      // 处理stdout进度信息
+      ffmpeg.stdout.on('data', (data) => {
+        stdout += data.toString();
+        const lines = stdout.split('\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('out_time_ms=')) {
+            const timeMs = parseInt(line.split('=')[1]);
+            const currentSeconds = timeMs / 1000000; // 微秒转秒
+            const progress = Math.min(Math.max((currentSeconds / totalDuration) * 100, 0), 100);
+            
+            // 发送进度更新
+            event.sender.send('video-trim-progress', {
+              progress: Math.round(progress),
+              currentTime: currentSeconds.toFixed(1),
+              totalTime: totalDuration.toFixed(1)
+            });
+          }
+        }
+      });
       
       ffmpeg.stderr.on('data', (data) => {
         stderr += data.toString();
@@ -656,22 +698,39 @@ ipcMain.handle('trim-video', async (event, options) => {
       ffmpeg.on('close', (code) => {
         if (code === 0) {
           console.log('视频裁切成功:', outputPath);
+          // 发送完成事件
+          event.sender.send('video-trim-complete', {
+            success: true,
+            outputPath: outputPath
+          });
           resolve({ success: true, outputPath });
         } else {
           console.error('FFmpeg裁切失败，退出码:', code);
           console.error('错误输出:', stderr);
+          // 发送错误事件
+          event.sender.send('video-trim-error', {
+            error: `视频裁切失败 (退出码: ${code})`,
+            stderr: stderr
+          });
           reject(new Error(`视频裁切失败 (退出码: ${code})`));
         }
       });
       
       ffmpeg.on('error', (error) => {
         console.error('FFmpeg进程错误:', error);
+        // 发送错误事件
+        event.sender.send('video-trim-error', {
+          error: `FFmpeg执行失败: ${error.message}`
+        });
         reject(new Error(`FFmpeg执行失败: ${error.message}`));
       });
       
       // 设置超时
       setTimeout(() => {
         ffmpeg.kill();
+        event.sender.send('video-trim-error', {
+          error: '视频裁切超时'
+        });
         reject(new Error('视频裁切超时'));
       }, 300000); // 5分钟超时
     });

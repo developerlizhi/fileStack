@@ -597,8 +597,8 @@ header h1 {
 }
 
 .video-thumbnail {
-  width: 96px;
-  height: 72px;
+  width: 128px;
+  height: 96px;
   object-fit: cover;
   border-radius: 4px;
   border: 1px solid #ddd;
